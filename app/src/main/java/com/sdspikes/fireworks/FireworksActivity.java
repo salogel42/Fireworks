@@ -463,9 +463,9 @@ public class FireworksActivity extends Activity
             Bundle autoMatchCriteria = null;
 
             int minAutoMatchPlayers = data.getIntExtra(
-                    Multiplayer.EXTRA_MIN_AUTOMATCH_PLAYERS, 0);
+                    Multiplayer.EXTRA_MIN_AUTOMATCH_PLAYERS, 2);
             int maxAutoMatchPlayers = data.getIntExtra(
-                    Multiplayer.EXTRA_MAX_AUTOMATCH_PLAYERS, 0);
+                    Multiplayer.EXTRA_MAX_AUTOMATCH_PLAYERS, 5);
 
             if (minAutoMatchPlayers > 0) {
                 autoMatchCriteria = RoomConfig.createAutoMatchCriteria(
