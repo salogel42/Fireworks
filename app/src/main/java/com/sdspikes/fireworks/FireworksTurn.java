@@ -34,7 +34,7 @@ public class FireworksTurn {
 
     public static final String TAG = "EBTurn";
 
-    public String data = "";
+    public GameState state;
     public int turnCounter;
 
     public FireworksTurn() {
@@ -45,7 +45,7 @@ public class FireworksTurn {
         JSONObject retVal = new JSONObject();
 
         try {
-            retVal.put("data", data);
+            retVal.put("state", state.getJSONObect());
             retVal.put("turnCounter", turnCounter);
 
         } catch (JSONException e) {
@@ -82,9 +82,10 @@ public class FireworksTurn {
 
         try {
             JSONObject obj = new JSONObject(st);
+            JSONObject stateObj;
 
-            if (obj.has("data")) {
-                retVal.data = obj.getString("data");
+            if (obj.has("state")) {
+                retVal.state = new GameState(obj.getJSONObject("state"));
             }
             if (obj.has("turnCounter")) {
                 retVal.turnCounter = obj.getInt("turnCounter");

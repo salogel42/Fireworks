@@ -1,30 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<!--
+   Copyright (C) 2013 Google Inc.
 
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<resources>
     <string name="app_name">Fireworks</string>
-    <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
-    <string name="next_turn_">Next turn</string>
-    <string name="welcome">Welcome to Fireworks, the game!  This is network-only, so you&amp;apos;ll need to log in to play!</string>
+    <string name="game_title">Fireworks!</string>
+
+    <string name="signing_in">Signing in with Google</string>
+    <string name="signing_out">Signing out</string>
+
+    <string name="game_blurb">A game that tests your ability to share and track information. To play this game with friends, you must sign in with Google.</string>
+
+    <string name="single_player">Single Player</string>
+    <string name="single_player_explanation">Play against AI(s)!</string>
+
+    <string name="quick_game">Quick game</string>
+    <string name="quick_game_explanation">Challenge a random opponent.</string>
+
+    <string name="invite_players">Invite friends</string>
+    <string name="invite_players_explanation">Invite friends to play a game.</string>
+
+    <string name="see_invitations">See invitations</string>
+    <string name="see_invitations_explanation">See pending invitations.</string>
+
+    <string name="inv_popup_text">Incoming invitation!</string>
+    <string name="accept_popup_invite">Accept!</string>
+
     <string name="sign_out">Sign Out</string>
-    <string name="match_instructions">Type in a new word for the data in this game, then hit done.</string>
-    <string name="quick_match">Quick match</string>
-    <string name="continue_str">Continue</string>
-    <string name="guesser_prompt">This has not been set.</string>
-    <string name="clear">Clear</string>
-    <string name="done">Done</string>
-    <string name="leave">Leave</string>
-    <string name="cancel">Cancel</string>
-    <string name="finish">Finish</string>
-    <string name="welcome_to_our_skeleton_app_">Welcome to our fireworks app!</string>
-    <string name="check_games">Check games</string>
-    <string name="start_match">Start Match</string>
-    <string name="turn_counter">Turn counter</string>
-    <string name="signin_other_error">There was an issue with sign in.  Please try again later.</string>
+    <string name="please_wait">Please wait...</string>
+
+    <string name="instructions">Click the button as fast as you can!</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="your_score">Your score:</string>
+    <string name="error">Error</string>
+
+    <string name="game_problem">An error occurred while starting the game. Please try again.</string>
+    <string name="click_me">Click me!</string>
+    <string name="is_inviting_you">is challenging you to a game!</string>
+    <string name="signin_other_error">There was an issue with sign in. Please try again later.</string>
 
     <string name="sign_in_failed">Failed to sign in. Please check your network connection and try again.</string>
     <string name="app_misconfigured">The application is incorrectly configured. Check that the package name and signing certificate match the client ID created in Developer Console. Also, if the application is not yet published, check that the account you are trying to sign in with is listed as a tester account. See logs for more information.</string>
     <string name="license_failed">License check failed.</string>
     <string name="unknown_error">Unknown error.</string>
 
+    <string name="give_hint">Give Hint</string>
+    <string name="play">Play</string>
+    <string name="discard">Discard</string>
+
+    <string name="action_settings">Action Settings</string>
 </resources>
