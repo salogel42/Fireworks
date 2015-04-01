@@ -16,13 +16,8 @@
 
 package com.sdspikes.fireworks;
 
-import android.util.Log;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 
 /**
  * Basic turn data. It's just a blank data string and a turn number counter.
@@ -35,56 +30,34 @@ public class FireworksTurn {
     public static final String TAG = "EBTurn";
 
     public GameState state;
-    public int turnCounter;
+    public int turnCounter = 0;
 
     public FireworksTurn() {
     }
 
     // This is the byte array we will write out to the TBMP API.
-    public byte[] persist() {
+    public JSONObject getJSONObject() {
         JSONObject retVal = new JSONObject();
 
         try {
-            retVal.put("state", state.getJSONObect());
+            retVal.put("state", state.getJSONObject());
             retVal.put("turnCounter", turnCounter);
 
         } catch (JSONException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-
-        String st = retVal.toString();
-
-        Log.d(TAG, "==== PERSISTING\n" + st);
-
-        return st.getBytes(Charset.forName("UTF-8"));
+        return retVal;
     }
 
     // Creates a new instance of FireworksTurn.
-    static public FireworksTurn unpersist(byte[] byteArray) {
-
-        if (byteArray == null) {
-            Log.d(TAG, "Empty array---possible bug.");
-            return new FireworksTurn();
-        }
-
-        String st = null;
-        try {
-            st = new String(byteArray, "UTF-8");
-        } catch (UnsupportedEncodingException e1) {
-            e1.printStackTrace();
-            return null;
-        }
-
-        Log.d(TAG, "====UNPERSIST \n" + st);
-
+    static public FireworksTurn unpersist(JSONObject obj) {
         FireworksTurn retVal = new FireworksTurn();
 
         try {
-            JSONObject obj = new JSONObject(st);
-            JSONObject stateObj;
-
-            if (obj.has("state")) {
+            if (!obj.has("state")) {
+                return null;
+            } else {
                 retVal.state = new GameState(obj.getJSONObject("state"));
             }
             if (obj.has("turnCounter")) {
