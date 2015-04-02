@@ -981,29 +981,49 @@ public class FireworksActivity extends Activity
         for (int i = 1; i < played.getChildCount(); i++) {
             ((TextView)played.getChildAt(i)).setText(String.valueOf(mTurnData.state.played[i - 1]));
         }
+        ((TextView)findViewById(R.id.deck)).setText(String.valueOf(mTurnData.state.deck.size()));
         ((TextView)findViewById(R.id.hints)).setText(
                 String.valueOf(mTurnData.state.hintsRemaining));
         ((TextView)findViewById(R.id.misplays)).setText(
                 String.valueOf(mTurnData.state.explosionsRemaining));
         if (mDiscardWidthR1 != 0) {
-            LinearLayout row1 = ((LinearLayout) findViewById(R.id.discard_pile_row_1));
-            row1.removeAllViews();
-
-            int totalDiscarded = 0;
-            for (int i = 0; i < mTurnData.state.discarded.length; i++) {
-                totalDiscarded += mTurnData.state.discarded[i].size();
-            }
-            for (int i = 0; i < mTurnData.state.discarded.length; i++) {
-                for (int j = 0; j < mTurnData.state.discarded[i].size(); j++) {
-                    row1.addView(makeNewCardTextView(
-                            mDiscardWidthR1/totalDiscarded, mTurnData.state.discarded[i].get(j)));
-                }
-            }
+            displayDiscardPiles();
         }
         // TODO(sdspikes): add log
 
     }
 
+    private void displayDiscardPiles() {
+        LinearLayout currRow = ((LinearLayout) findViewById(R.id.discard_pile_row_1));
+        LinearLayout row2 = ((LinearLayout) findViewById(R.id.discard_pile_row_2));
+        currRow.removeAllViews();
+        row2.removeAllViews();
+        int maxInTopRow = mDiscardWidthR1/MIN_CARD_WIDTH;
+
+        int rowDivision = mTurnData.state.discarded.length;
+        int totalDiscarded = 0;
+        int topRow = 0;
+        for (int i = 0; i < mTurnData.state.discarded.length; i++) {
+            totalDiscarded += mTurnData.state.discarded[i].size();
+            if (totalDiscarded <= maxInTopRow) { topRow = totalDiscarded; }
+            if (totalDiscarded > maxInTopRow && rowDivision == mTurnData.state.discarded.length) {
+                rowDivision = i;
+            }
+        }
+        if (rowDivision == mTurnData.state.discarded.length) { row2.setVisibility(View.GONE); }
+        if (totalDiscarded == 0) { return;}
+        int width = mDiscardWidthR1/topRow;
+        for (int i = 0; i < mTurnData.state.discarded.length; i++) {
+            for (int j = 0; j < mTurnData.state.discarded[i].size(); j++) {
+                if (i == rowDivision) {
+                    currRow = row2;
+                    row2.setVisibility(View.VISIBLE);
+                    width = mDiscardWidthR2/(totalDiscarded - topRow);
+                }
+                currRow.addView(makeNewCardTextView(width, mTurnData.state.discarded[i].get(j)));
+            }
+        }
+    }
     private TextView makeNewCardTextView(int width, GameState.Card card) {
         width = Math.min(width, MAX_CARD_WIDTH);
         width = Math.max(width, MIN_CARD_WIDTH);
