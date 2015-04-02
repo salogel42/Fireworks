@@ -148,6 +148,7 @@ public class GameState {
                     players.get((i + 1)  % numPlayers).getParticipantId(),
                     hand));
         }
+        // TODO(sdspikes): apparently this is not always correct?
         currentPlayerId = players.get(0).getParticipantId();
     }
 

@@ -20,6 +20,7 @@ import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -100,6 +101,8 @@ public class FireworksActivity extends Activity
 
     // Request code used to invoke sign in user interactions.
     private static final int RC_SIGN_IN = 9001;
+    public static final int MAX_CARD_WIDTH = 40;
+    public static final int MIN_CARD_WIDTH = 20;
 
     // Client used to interact with Google APIs.
     private GoogleApiClient mGoogleApiClient;
@@ -622,18 +625,18 @@ public class FireworksActivity extends Activity
     }
 
     void updateRoom(Room room) {
-//        mRoom = room;
         if (room != null && mRoom != room) {
             mRoom = room;
             mRoomId = room.getRoomId();
+            Log.d(TAG, "updating room: " + mRoomId);
             mParticipants = room.getParticipants();
             if (mParticipants != null) {
                 resetGameVars();
                 setUpMap();
-//                startGame(mParticipants.size() != 1);
             }
+        } else {
+            Log.d(TAG, "tried to update room");
         }
-        Log.d(TAG, "tried to update room");
     }
 
     /*
@@ -749,16 +752,20 @@ public class FireworksActivity extends Activity
             @Override
             public void onGlobalLayout() {
                 LinearLayout played = (LinearLayout)findViewById(R.id.played_pile);
-                int totalWidth = played.getMeasuredWidth();
+                mDiscardWidthR2 = played.getMeasuredWidth();
 
-                if (totalWidth != 0) {
-                    int usableWidth = totalWidth - findViewById(R.id.played_label).getMeasuredWidth();
+                if (mDiscardWidthR2 != 0) {
+                    int usableWidth = mDiscardWidthR2 - findViewById(R.id.played_label).getMeasuredWidth();
+                    mDiscardWidthR1 = mDiscardWidthR2 - findViewById(R.id.discarded_label).getMeasuredWidth();
                     for (int i = 1; i < played.getChildCount(); i++) {
                         ViewGroup.LayoutParams params = played.getChildAt(i).getLayoutParams();
                         params.width = usableWidth/5;
                         played.getChildAt(i).setLayoutParams(params);
                     }
                     played.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+
+                    // In case all the data is ready already and was just waiting on this.
+                    updateDisplay();
                 }
             }
         });
@@ -798,6 +805,7 @@ public class FireworksActivity extends Activity
 
         try {
             JSONObject obj = unpersist(buf);
+            // First, try seeing if it's a gamestate since that's the most common message
             mTurnData = FireworksTurn.unpersist(obj);
             if (mTurnData != null) {
                 Log.d(TAG, "got turn data!");
@@ -830,6 +838,8 @@ public class FireworksActivity extends Activity
         // set up initial turn data
         mTurnData = new FireworksTurn();
         mTurnData.state = new GameState(mParticipants);
+        // TODO(sdspikes): maybe pass this to GameState constructor?
+        mTurnData.state.currentPlayerId = mMyId;
         JSONObject jsonTurn =  mTurnData.getJSONObject();
         jsonTurn.put("firstTime", mMyId);
         broadcastGameInfo(jsonTurn);
@@ -958,7 +968,12 @@ public class FireworksActivity extends Activity
         broadcastGameInfo(obj);
     }
 
+    private int mDiscardWidthR1 = 0;
+    private int mDiscardWidthR2 = 0;
+
     private void updateDisplay() {
+        // In case it's called too early
+        if (mTurnData == null) { return; }
         for (Map.Entry<String, GameState.HandNode> entry : mTurnData.state.hands.entrySet()) {
             fragments.get(entry.getKey()).updateHand(entry.getValue().hand);
         }
@@ -966,12 +981,42 @@ public class FireworksActivity extends Activity
         for (int i = 1; i < played.getChildCount(); i++) {
             ((TextView)played.getChildAt(i)).setText(String.valueOf(mTurnData.state.played[i - 1]));
         }
-        ((TextView)findViewById(R.id.hints)).setText(String.valueOf(mTurnData.state.hintsRemaining));
-        ((TextView)findViewById(R.id.misplays)).setText(String.valueOf(mTurnData.state.explosionsRemaining));
-        // TODO(sdspikes): update display based on gameState
+        ((TextView)findViewById(R.id.hints)).setText(
+                String.valueOf(mTurnData.state.hintsRemaining));
+        ((TextView)findViewById(R.id.misplays)).setText(
+                String.valueOf(mTurnData.state.explosionsRemaining));
+        if (mDiscardWidthR1 != 0) {
+            LinearLayout row1 = ((LinearLayout) findViewById(R.id.discard_pile_row_1));
+            row1.removeAllViews();
+
+            int totalDiscarded = 0;
+            for (int i = 0; i < mTurnData.state.discarded.length; i++) {
+                totalDiscarded += mTurnData.state.discarded[i].size();
+            }
+            for (int i = 0; i < mTurnData.state.discarded.length; i++) {
+                for (int j = 0; j < mTurnData.state.discarded[i].size(); j++) {
+                    row1.addView(makeNewCardTextView(
+                            mDiscardWidthR1/totalDiscarded, mTurnData.state.discarded[i].get(j)));
+                }
+            }
+        }
+        // TODO(sdspikes): add log
 
     }
 
+    private TextView makeNewCardTextView(int width, GameState.Card card) {
+        width = Math.min(width, MAX_CARD_WIDTH);
+        width = Math.max(width, MIN_CARD_WIDTH);
+        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
+                width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        TextView textView = new TextView(this);
+        textView.setLayoutParams(params);
+        textView.setGravity(Gravity.CENTER);
+        textView.setText(String.valueOf(card.rank));
+        textView.setBackgroundResource(HandFragment.cardColorToBGColor(card.color));
+        textView.setTextColor(getResources().getColor(HandFragment.cardColorToTextColor(card.color)));
+        return textView;
+    }
     /*
      * MISC SECTION. Miscellaneous methods.
      */

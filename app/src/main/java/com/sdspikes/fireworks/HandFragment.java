@@ -1,6 +1,7 @@
 package com.sdspikes.fireworks;
 
 import android.app.Activity;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.app.Fragment;
@@ -117,7 +118,7 @@ public class HandFragment extends Fragment {
                 Log.d(TAG, "mButtonWidth: " + mButtonWidth);
                 if (getView() != null && mButtonWidth == 0) {
                     Log.d(TAG, "width: " + getView().getMeasuredWidth());
-                    mButtonWidth = getView().getMeasuredWidth();
+                    mButtonWidth = getView().getMeasuredWidth()/cardButtons.size();
                     if (mButtonWidth != 0) {
                         updateDisplay();
                     }
@@ -180,14 +181,14 @@ public class HandFragment extends Fragment {
      * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         public void onFragmentSelected(String playerId, int index);
     }
 
     private void updateDisplay() {
-        mButtonWidth = getView().getMeasuredWidth()/cardButtons.size();
-        Log.d(TAG, "" + getView().getMeasuredWidth());
-        Log.d(TAG, "" + mButtonWidth);
+        // In case updateDisplay gets called before widths are calculated (it'll be called again
+        // when they are ready)
+        if (mButtonWidth == 0) { return; }
+
         for (int i = 0; i < mHand.size() && i < cardButtons.size(); i++) {
             try {
                 Log.d(TAG, "" + i + "  card: " + mHand.get(i).encodeCard().toString());
@@ -219,7 +220,7 @@ public class HandFragment extends Fragment {
         // TODO(sdspikes): update the display based on the hand etc
     }
 
-    private int cardColorToBGColor(GameState.CardColor color) {
+    public static int cardColorToBGColor(GameState.CardColor color) {
         switch (color) {
             case b: return R.color.Blue;
             case g: return R.color.Green;
@@ -230,7 +231,7 @@ public class HandFragment extends Fragment {
         }
     }
 
-    private int cardColorToTextColor(GameState.CardColor color) {
+    public static int cardColorToTextColor(GameState.CardColor color) {
         switch (color) {
             case b: case g: case r: return R.color.TextDarkBG;
             case w: case y: default: return R.color.TextLightBG;
