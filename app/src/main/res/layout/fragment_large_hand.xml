@@ -18,39 +18,24 @@
         android:minHeight="100px">
 
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
             android:id="@+id/card1"
-            android:layout_gravity="center_horizontal" />
+            style="@style/CardButton"/>
 
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
             android:id="@+id/card2"
-            android:layout_gravity="center_horizontal" />
+            style="@style/CardButton"/>
 
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
             android:id="@+id/card3"
-            android:layout_gravity="center_horizontal" />
+            style="@style/CardButton"/>
 
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
             android:id="@+id/card4"
-            android:layout_gravity="center_horizontal" />
+            style="@style/CardButton"/>
 
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
             android:id="@+id/card5"
-            android:layout_gravity="center_horizontal" />
+            style="@style/CardButton"/>
 
     </LinearLayout>
 </LinearLayout>

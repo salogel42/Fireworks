@@ -22,7 +22,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -50,10 +53,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -127,13 +128,6 @@ public class FireworksActivity extends Activity
 
     // The participants in the currently active game
     private List<Participant> mParticipants = null;
-
-    // My participant ID in the currently active game
-    private String mMyId = null;
-
-    private SortedMap<String, String> mIdToName;
-
-    private FireworksTurn mTurnData = null;
 
     // If non-null, this is the id of the invitation we received via the
     // invitation listener
@@ -398,7 +392,6 @@ public class FireworksActivity extends Activity
     // Leave the room.
     void leaveRoom() {
         Log.d(TAG, "Leaving room.");
-        mSecondsLeft = 0;
         stopKeepingScreenOn();
         if (mRoomId != null) {
             Games.RealTimeMultiplayer.leave(mGoogleApiClient, this, mRoomId);
@@ -629,13 +622,17 @@ public class FireworksActivity extends Activity
     }
 
     void updateRoom(Room room) {
-        mRoom = room;
-//        if (room != null) {
-//            mParticipants = room.getParticipants();
-//        }
-//        if (mParticipants != null) {
-//            updatePeerScoresDisplay();
-//        }
+//        mRoom = room;
+        if (room != null && mRoom != room) {
+            mRoom = room;
+            mRoomId = room.getRoomId();
+            mParticipants = room.getParticipants();
+            if (mParticipants != null) {
+                resetGameVars();
+                setUpMap();
+//                startGame(mParticipants.size() != 1);
+            }
+        }
         Log.d(TAG, "tried to update room");
     }
 
@@ -644,24 +641,40 @@ public class FireworksActivity extends Activity
      */
 
     // Current state of the game:
-    int mSecondsLeft = -1; // how long until the game ends (seconds)
-    final static int GAME_DURATION = 20; // game duration, seconds.
-    int mScore = 0; // user's current score
+
+    // My participant ID in the currently active game
+    private String mMyId = null;
+
+    private SortedMap<String, String> mIdToName;
+
+    private FireworksTurn mTurnData = null;
+
+    private boolean mHandSelectionMode = false;
+
+    private boolean mDiscardMode = false;
+
+    private boolean mPlayMode = false;
+
+    private Map<String, HandFragment> fragments = new HashMap<>();
 
     // Reset game variables in preparation for a new game.
     void resetGameVars() {
-
-
-        mSecondsLeft = GAME_DURATION;
-        mScore = 0;
-        mParticipantScore.clear();
-        mFinishedParticipants.clear();
+        mMyId = null;
+        mTurnData = null;
+        mIdToName = null;
+        mHandSelectionMode = false;
+        mDiscardMode = false;
+        mPlayMode = false;
+        fragments = new HashMap<>();
+        togglePlayOptionsVisible(false);
     }
 
+    // Assumes mRoom is set up
     private void setUpMap() {
         if (mIdToName == null) {
-            mIdToName = new TreeMap<>();
             mParticipants = mRoom.getParticipants();
+            mMyId = mRoom.getParticipantId(Games.Players.getCurrentPlayerId(mGoogleApiClient));
+            mIdToName = new TreeMap<>();
             for (Participant p : mParticipants) {
                 mIdToName.put(p.getParticipantId(), p.getDisplayName());
             }
@@ -701,17 +714,16 @@ public class FireworksActivity extends Activity
 //                } catch (JSONException e) {
 //                    e.printStackTrace();
 //                }
+                togglePlayOptionsVisible(true);
             } else {
                 Log.d(TAG, mMyId + " is not the first id and should get a message w/ game state");
             }
         }
     }
 
-    private void displayInitialHands() {
+    private void displayInitialState() {
         switchToScreen(R.id.screen_game);
-
         GameState.HandNode currentNode = mTurnData.state.hands.get(mMyId);
-
         FragmentManager fm = getFragmentManager();
 
         if (fm.findFragmentById(R.id.my_hand) == null) {
@@ -731,8 +743,25 @@ public class FireworksActivity extends Activity
             }
         }
 
-        // TODO(sdspikes): make the play/discard etc buttons visible
-        findViewById(R.id.button_click_me).setVisibility(View.VISIBLE);
+        LinearLayout played = (LinearLayout)findViewById(R.id.played_pile);
+
+        played.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                LinearLayout played = (LinearLayout)findViewById(R.id.played_pile);
+                int totalWidth = played.getMeasuredWidth();
+
+                if (totalWidth != 0) {
+                    int usableWidth = totalWidth - findViewById(R.id.played_label).getMeasuredWidth();
+                    for (int i = 1; i < played.getChildCount(); i++) {
+                        ViewGroup.LayoutParams params = played.getChildAt(i).getLayoutParams();
+                        params.width = usableWidth/5;
+                        played.getChildAt(i).setLayoutParams(params);
+                    }
+                    played.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                }
+            }
+        });
     }
 
     private void addHandFragment(
@@ -746,26 +775,20 @@ public class FireworksActivity extends Activity
                 node.hand,
                 playerId,
                 playerName);
+        fragments.put(playerId, handFragment);
         // TODO(sdspikes): previously I just had .commit here and got
         // java.lang.IllegalStateException: Can not perform this action after onSaveInstanceState
         fm.beginTransaction().add(id, handFragment).commitAllowingStateLoss();
     }
 
     private void togglePlayOptionsVisible(boolean visible) {
-
+        findViewById(R.id.my_turn_buttons).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     /*
      * COMMUNICATIONS SECTION. Methods that implement the game's network
      * protocol.
      */
-
-    // Score of other participants. We update this as we receive their scores
-    // from the network.
-    Map<String, Integer> mParticipantScore = new HashMap<String, Integer>();
-
-    // Participants who sent us their final score.
-    Set<String> mFinishedParticipants = new HashSet<String>();
 
     // Called when we receive a real-time message from the network.
     @Override
@@ -781,10 +804,15 @@ public class FireworksActivity extends Activity
                 if (obj.has("firstTime")) {
                     // Set up the id map if necessary
                     setUpMap();
-                    displayInitialHands();
+                    displayInitialState();
                 } else {
                     updateDisplay();
                 }
+                togglePlayOptionsVisible(mMyId.equals(mTurnData.state.currentPlayerId));
+            } else if (obj.has("handUpdate")) {
+                // TODO(sdspikes): is it possible that the hand could be updated (different cards)
+                // before this?
+                mTurnData.state.hands.get(sender).setHand(obj.getJSONArray("handUpdate"));
             } else if (obj.has("firstPlayer")) {
                 String firstPlayerId = obj.getString("firstPlayer");
                 Log.d(TAG, "first player id: " + firstPlayerId + ", mine: " + mMyId);
@@ -803,9 +831,9 @@ public class FireworksActivity extends Activity
         mTurnData = new FireworksTurn();
         mTurnData.state = new GameState(mParticipants);
         JSONObject jsonTurn =  mTurnData.getJSONObject();
-        jsonTurn.put("firstTime", true);
+        jsonTurn.put("firstTime", mMyId);
         broadcastGameInfo(jsonTurn);
-        displayInitialHands();
+        displayInitialState();
     }
 
     private JSONObject unpersist(byte[] buf) throws JSONException {
@@ -835,7 +863,7 @@ public class FireworksActivity extends Activity
     }
 
     // Broadcast my score to everybody else.
-    void broadcastGameInfo(JSONObject obj) {
+    private void broadcastGameInfo(JSONObject obj) {
         byte[] buf = persist(obj);
         if (!mMultiplayer)
             return; // playing single-player mode, no need to inform anyone of anything
@@ -853,20 +881,24 @@ public class FireworksActivity extends Activity
                 int result = Games.RealTimeMultiplayer.sendReliableMessage(mGoogleApiClient, null,
                         buf, mRoomId, p.getParticipantId());
             } else {
-                Log.d(TAG, "sending unreliable to " + p.getParticipantId());
-                // it's an interim score notification, so we can use unreliable
-                int result = Games.RealTimeMultiplayer.sendUnreliableMessage(mGoogleApiClient,
-                        buf, mRoomId, p.getParticipantId());
-                if (result == RealTimeMultiplayer.REAL_TIME_MESSAGE_FAILED) {
-                    Log.d(TAG, "failed to send message.");
-                    if (buf.length > Multiplayer.MAX_UNRELIABLE_MESSAGE_LEN) {
-                        Log.d(TAG, "It's too long by " + (buf.length - Multiplayer.MAX_UNRELIABLE_MESSAGE_LEN));
-                    }
-                }
-                if (result != RealTimeMultiplayer.REAL_TIME_MESSAGE_FAILED)
-                    Log.d(TAG, "success!");
+                sendUnreliable(buf, p.getParticipantId());
             }
         }
+    }
+
+    private void sendUnreliable(byte[] buf, String participantId) {
+        Log.d(TAG, "sending unreliable to " + participantId);
+        // it's an interim score notification, so we can use unreliable
+        int result = Games.RealTimeMultiplayer.sendUnreliableMessage(mGoogleApiClient,
+                buf, mRoomId, participantId);
+        if (result == RealTimeMultiplayer.REAL_TIME_MESSAGE_FAILED) {
+            Log.d(TAG, "failed to send message.");
+            if (buf.length > Multiplayer.MAX_UNRELIABLE_MESSAGE_LEN) {
+                Log.d(TAG, "It's too long by " + (buf.length - Multiplayer.MAX_UNRELIABLE_MESSAGE_LEN));
+            }
+        }
+        if (result != RealTimeMultiplayer.REAL_TIME_MESSAGE_FAILED)
+            Log.d(TAG, "success!");
     }
 
     /*
@@ -878,7 +910,7 @@ public class FireworksActivity extends Activity
     final static int[] CLICKABLES = {
             R.id.button_accept_popup_invitation, R.id.button_invite_players,
             R.id.button_quick_game, R.id.button_see_invitations, R.id.button_sign_in,
-            R.id.button_sign_out, R.id.button_click_me, R.id.button_single_player,
+            R.id.button_sign_out, R.id.button_single_player,
             R.id.button_single_player_2
     };
 
@@ -927,7 +959,17 @@ public class FireworksActivity extends Activity
     }
 
     private void updateDisplay() {
+        for (Map.Entry<String, GameState.HandNode> entry : mTurnData.state.hands.entrySet()) {
+            fragments.get(entry.getKey()).updateHand(entry.getValue().hand);
+        }
+        LinearLayout played = (LinearLayout) findViewById(R.id.played_pile);
+        for (int i = 1; i < played.getChildCount(); i++) {
+            ((TextView)played.getChildAt(i)).setText(String.valueOf(mTurnData.state.played[i - 1]));
+        }
+        ((TextView)findViewById(R.id.hints)).setText(String.valueOf(mTurnData.state.hintsRemaining));
+        ((TextView)findViewById(R.id.misplays)).setText(String.valueOf(mTurnData.state.explosionsRemaining));
         // TODO(sdspikes): update display based on gameState
+
     }
 
     /*
@@ -955,24 +997,19 @@ public class FireworksActivity extends Activity
     // Cancel the game. Should possibly wait until the game is canceled before
     // giving up on the view.
     public void onDiscardClicked(View view) {
-        // TODO(sdspikes): allow user to click their cards
-        // update discard
-        // draw card from deck
-        // update hand
-        // add one to available clues
-
-        // update display
-        updateAllPlayers(mTurnData.getJSONObject());
+        // allow user to click their cards, listener will deal with actually doing the work
+        togglePlayOptionsVisible(false);
+        mHandSelectionMode = true;
+        mDiscardMode = true;
     }
 
     // Leave the game during your turn. Note that there is a separate
     // Games.TurnBasedMultiplayer.leaveMatch() if you want to leave NOT on your turn.
     public void onPlayClicked(View view) {
-        // TODO(sdspikes): allow user to click their cards, same as in onDiscard
-        // update play/discard/used splody tokens
-        // draw card from deck
-        // update hand
-        updateAllPlayers(mTurnData.getJSONObject());
+        // allow user to click their cards, listener will deal with actually doing the work
+        togglePlayOptionsVisible(false);
+        mHandSelectionMode = true;
+        mPlayMode = true;
     }
 
 
@@ -988,8 +1025,28 @@ public class FireworksActivity extends Activity
     }
 
     @Override
-    public void onFragmentSelected(String playerId) {
-        // TODO(sdspikes): do something here probably?
-
+    public void onFragmentSelected(String playerId, int index) {
+        if (mHandSelectionMode && playerId == mMyId) {
+            GameState.HandNode node = mTurnData.state.hands.get(mMyId);
+            GameState.Card removedCard = node.hand.remove(index);
+            node.hand.add(mTurnData.state.deck.remove());
+            if (mPlayMode) {
+                if (mTurnData.state.played[removedCard.color.ordinal()] == removedCard.rank - 1) {
+                    mTurnData.state.played[removedCard.color.ordinal()]++;
+                } else {
+                    mTurnData.state.explosionsRemaining--;
+                }
+            }
+            if (mDiscardMode) {
+                mTurnData.state.discarded[removedCard.color.ordinal()].add(removedCard);
+            }
+            mTurnData.state.currentPlayerId =
+                    mTurnData.state.hands.get(mTurnData.state.currentPlayerId).nextPlayerId;
+            Log.d(TAG, "updated currentId : " + mTurnData.state.currentPlayerId);
+            mPlayMode = false;
+            mDiscardMode = false;
+            mHandSelectionMode = false;
+            updateAllPlayers(mTurnData.getJSONObject());
+        }
     }
 }

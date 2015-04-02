@@ -21,6 +21,17 @@ import java.util.Map;
  */
 public class GameState {
 
+    public static final String EXPLOSIONS = "splode";
+    public static final String HINTS = "hints";
+    public static final String NUM_PLAYERS = "nPlayers";
+    public static final String DECK = "deck";
+    public static final String HANDS = "hands";
+    public static final String ID = "id";
+    public static final String HAND_NODE = "node";
+    public static final String PLAYED = "play";
+    public static final String DISCARDED = "discard";
+    public static final String CURRENT_ID = "currId";
+
     // Short names to reduce the length of messages
     enum CardColor { b, r, g, y, w }
 
@@ -68,23 +79,27 @@ public class GameState {
     }
 
     public static class HandNode {
+        public static final String NEXT_ID = "nId";
+        public static final String HAND = "hand";
+
         public final String nextPlayerId;
         public List<Card> hand;
-        public final String displayName;
 
-        public HandNode(String nextId, String name, List<Card> hand) {
+        public HandNode(String nextId, List<Card> hand) {
             nextPlayerId = nextId;
-            displayName = name;
             this.hand = hand;
         }
 
-        public HandNode(String nextId, String name) {
-            this(nextId, name, new ArrayList<Card>());
+        public HandNode(String nextId) {
+            this(nextId, new ArrayList<Card>());
         }
 
         public HandNode(JSONObject jsonNode) throws JSONException {
-            this(jsonNode.getString("nextId"), jsonNode.getString("name"));
-            JSONArray jsonHand = jsonNode.getJSONArray("hand");
+            this(jsonNode.getString(NEXT_ID));
+            setHand(jsonNode.getJSONArray(HAND));
+        }
+
+        public void setHand(JSONArray jsonHand) throws JSONException {
             for (int i = 0; i < jsonHand.length(); i++) {
                 hand.add(new Card(jsonHand.getJSONObject(i)));
             }
@@ -92,28 +107,34 @@ public class GameState {
 
         public JSONObject encodeNode() throws JSONException {
             JSONObject result = new JSONObject();
-            result.put("nextId", nextPlayerId);
+            result.put(NEXT_ID, nextPlayerId);
+            result.put(HAND, encodeHand());
+            return result;
+        }
+
+        public JSONArray encodeHand() throws JSONException {
             JSONArray jsonHand = new JSONArray();
             for (Card c : hand) {
                 jsonHand.put(c.encodeCard());
             }
-            result.put("hand", jsonHand);
-            result.put("name", displayName);
-            return result;
+            return jsonHand;
         }
     }
 
+    public String currentPlayerId;
     public final int numPlayers;
     public LinkedList<Card> deck;
-    public List<Card>[] played = new ArrayList[CardColor.values().length];
+    public int[] played = new int[CardColor.values().length];
     public List<Card>[] discarded = new ArrayList[CardColor.values().length];
     public HashMap<String, HandNode> hands = new HashMap<>();
+    public int hintsRemaining = 8;
+    public int explosionsRemaining = 3;
 
     public GameState(List<Participant> players) {
         numPlayers = players.size();
         deck = createNewDeck();
         for (int i = 0; i < CardColor.values().length; i++) {
-            played[i] = new ArrayList<>();
+            played[i] = 0;
             discarded[i] = new ArrayList<>();
         }
         int numCardsInHand = cardsPerHand(numPlayers);
@@ -125,31 +146,34 @@ public class GameState {
             }
             hands.put(player.getParticipantId(), new HandNode(
                     players.get((i + 1)  % numPlayers).getParticipantId(),
-                    player.getDisplayName(),
                     hand));
         }
+        currentPlayerId = players.get(0).getParticipantId();
     }
 
     public GameState(JSONObject jsonState) {
         int players = -1;
         try {
-            players = jsonState.getInt("numPlayers");
+            players = jsonState.getInt(NUM_PLAYERS);
 
-            JSONArray deckArray = jsonState.getJSONArray("deck");
+            JSONArray deckArray = jsonState.getJSONArray(DECK);
             deck = new LinkedList<>();
             for (int i = 0; i < deckArray.length(); i++) {
                 deck.add(new Card(deckArray.getJSONObject(i)));
             }
 
-            JSONArray mapArray = jsonState.getJSONArray("hands");
+            JSONArray mapArray = jsonState.getJSONArray(HANDS);
             hands = new HashMap<>();
             for (int i = 0; i < mapArray.length(); i++) {
-                String id = mapArray.getJSONObject(i).getString("id");
-                hands.put(id, new HandNode(mapArray.getJSONObject(i).getJSONObject("handNode")));
+                String id = mapArray.getJSONObject(i).getString(ID);
+                hands.put(id, new HandNode(mapArray.getJSONObject(i).getJSONObject(HAND_NODE)));
             }
 
-            played =  decodeArrayOfLists(jsonState.getJSONArray("played"));
-            discarded =  decodeArrayOfLists(jsonState.getJSONArray("discarded"));
+            played =  decodeIntArray(jsonState.getJSONArray(PLAYED));
+            discarded =  decodeArrayOfLists(jsonState.getJSONArray(DISCARDED));
+            currentPlayerId = jsonState.getString(CURRENT_ID);
+            explosionsRemaining = jsonState.getInt(EXPLOSIONS);
+            hintsRemaining = jsonState.getInt(HINTS);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -172,6 +196,22 @@ public class GameState {
         return arr;
     }
 
+    private static int[] decodeIntArray(JSONArray jsonArray) throws JSONException {
+        int[] arr = new int[CardColor.values().length];
+        for (int i = 0; i < jsonArray.length(); i++) {
+            arr[i] = jsonArray.getInt(i);
+        }
+        return arr;
+    }
+
+    private static JSONArray encodeIntArray(int[] arr) throws JSONException {
+        JSONArray jsonArray = new JSONArray();
+        for (int i : arr) {
+            jsonArray.put(i);
+        }
+        return jsonArray;
+    }
+
     private static JSONArray encodeArrayOfLists(List<Card>[] arr) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         for (List<Card> anArr : arr) {
@@ -187,25 +227,28 @@ public class GameState {
     public JSONObject getJSONObject() {
         JSONObject result = new JSONObject();
         try {
-            result.put("numPlayers", numPlayers);
+            result.put(NUM_PLAYERS, numPlayers);
 
             JSONArray deckArray = new JSONArray();
             for (Card c : deck) {
                 deckArray.put(c.encodeCard());
             }
-            result.put("deck", deckArray);
+            result.put(DECK, deckArray);
 
             JSONArray handArray = new JSONArray();
             for (Map.Entry<String, HandNode> entry : hands.entrySet()) {
                 JSONObject jsonEntry = new JSONObject();
-                jsonEntry.put("id", entry.getKey());
-                jsonEntry.put("handNode", entry.getValue().encodeNode());
+                jsonEntry.put(ID, entry.getKey());
+                jsonEntry.put(HAND_NODE, entry.getValue().encodeNode());
                 handArray.put(jsonEntry);
             }
-            result.put("hands", handArray);
+            result.put(HANDS, handArray);
 
-            result.put("played", encodeArrayOfLists(played));
-            result.put("discarded", encodeArrayOfLists(discarded));
+            result.put(PLAYED, encodeIntArray(played));
+            result.put(DISCARDED, encodeArrayOfLists(discarded));
+            result.put(CURRENT_ID, currentPlayerId);
+            result.put(EXPLOSIONS, explosionsRemaining);
+            result.put(HINTS, hintsRemaining);
         } catch (JSONException e) {
             e.printStackTrace();
         }

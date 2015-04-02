@@ -2,7 +2,6 @@ package com.sdspikes.fireworks;
 
 import android.app.Activity;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.util.Log;
@@ -133,12 +132,23 @@ public class HandFragment extends Fragment {
         super.onStart();
     }
     // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
+    public void onButtonPressed(View v) {
         if (mListener != null) {
-            mListener.onFragmentSelected(mPlayerId);
+            mListener.onFragmentSelected(mPlayerId, idToIndex(v.getId()));
         }
     }
 
+    private int idToIndex(int id) {
+        switch (id) {
+            case R.id.card1: return 0;
+            case R.id.card2: return 1;
+            case R.id.card3: return 2;
+            case R.id.card4: return 3;
+            case R.id.card5: return 4;
+            default: return -1;
+        }
+
+    }
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
@@ -171,7 +181,7 @@ public class HandFragment extends Fragment {
      */
     public interface OnFragmentInteractionListener {
         // TODO: Update argument type and name
-        public void onFragmentSelected(String playerId);
+        public void onFragmentSelected(String playerId, int index);
     }
 
     private void updateDisplay() {
@@ -192,22 +202,38 @@ public class HandFragment extends Fragment {
 
             button.setLayoutParams(params);
             button.setText(Integer.toString(mHand.get(i).rank));
-            button.setBackgroundColor(cardColorToColor(mHand.get(i).color));
+            button.setBackgroundResource(cardColorToBGColor(mHand.get(i).color));
+            button.setTextColor(getResources().getColor(cardColorToTextColor(mHand.get(i).color)));
             button.setVisibility(View.VISIBLE);
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mListener != null) {
+                        mListener.onFragmentSelected(mPlayerId, idToIndex(v.getId()));
+                    }
+                }
+            });
         }
 
         playerName.setText(mPlayerName);
         // TODO(sdspikes): update the display based on the hand etc
     }
 
-    private int cardColorToColor(GameState.CardColor color) {
+    private int cardColorToBGColor(GameState.CardColor color) {
         switch (color) {
-            case b: return Color.BLUE;
-            case g: return Color.GREEN;
-            case r: return Color.RED;
-            case w: return Color.WHITE;
-            case y: return Color.YELLOW;
-            default: return Color.GRAY;
+            case b: return R.color.Blue;
+            case g: return R.color.Green;
+            case r: return R.color.Red;
+            case w: return R.color.White;
+            case y: return R.color.Yellow;
+            default: return R.color.BlurbColor;
+        }
+    }
+
+    private int cardColorToTextColor(GameState.CardColor color) {
+        switch (color) {
+            case b: case g: case r: return R.color.TextDarkBG;
+            case w: case y: default: return R.color.TextLightBG;
         }
     }
 }

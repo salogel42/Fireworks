@@ -41,7 +41,7 @@ public class FireworksTurn {
 
         try {
             retVal.put("state", state.getJSONObject());
-            retVal.put("turnCounter", turnCounter);
+            retVal.put("turn", turnCounter);
 
         } catch (JSONException e) {
             // TODO Auto-generated catch block
@@ -60,8 +60,8 @@ public class FireworksTurn {
             } else {
                 retVal.state = new GameState(obj.getJSONObject("state"));
             }
-            if (obj.has("turnCounter")) {
-                retVal.turnCounter = obj.getInt("turnCounter");
+            if (obj.has("turn")) {
+                retVal.turnCounter = obj.getInt("turn");
             }
 
         } catch (JSONException e) {

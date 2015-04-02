@@ -25,6 +25,14 @@
     <color name="SignOutButtonBackground">#e0e0e0</color>
     <color name="SignOutButtonTextColor">#404040</color>
 
+    <color name="TextLightBG">#a0a0a0</color>
+    <color name="TextDarkBG">#e0e0e0</color>
+    <color name="Blue">#ff5a7ecc</color>
+    <color name="Red">#ffcc1d0a</color>
+    <color name="Yellow">#fffaff88</color>
+    <color name="Green">#ff66cc85</color>
+    <color name="White">#ffffff</color>
+
     <dimen name="TitleSize">30sp</dimen>
 
     <style name="AppTheme" parent="android:Theme.Light.NoTitleBar.Fullscreen" />
@@ -126,12 +134,6 @@
         <item name="android:layout_marginBottom">20dp</item>
     </style>
 
-    <style name="FigureLabel">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">20sp</item>
-    </style>
-
     <style name="ScoreToast">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -169,9 +171,10 @@
         <item name="android:layout_marginBottom">20dp</item>
     </style>
 
-    <style name="ScoreLabel">
+    <style name="Labels">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">@dimen/font_size_medium</item>
     </style>
 
     <style name="ScoreDisplay">
@@ -201,6 +204,20 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="CardButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">center_horizontal</item>
+    </style>
+
+    <style name="PlayedPileTile">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:text">0</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textAppearance">?android:attr/textAppearanceMedium</item>
     </style>
 
 </resources>
