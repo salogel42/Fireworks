@@ -97,8 +97,14 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:background">@color/AccentColor</item>
         <item name="android:textColor">@color/ButtonTextColor</item>
-        <item name="android:paddingLeft">10dp</item>
-        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingLeft">5dp</item>
+        <item name="android:layout_marginLeft">5dp</item>
+        <item name="android:paddingRight">5dp</item>
+        <item name="android:layout_marginRight">5dp</item>
+    </style>
+
+    <style name="ActionButton" parent="@style/GameButton">
+        <item name="android:layout_marginTop">5dp</item>
     </style>
 
     <style name="MainScreenButton" parent="@style/GameButton">

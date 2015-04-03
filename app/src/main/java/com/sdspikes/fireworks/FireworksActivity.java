@@ -918,6 +918,14 @@ public class FireworksActivity extends Activity
                     }
                     played.getViewTreeObserver().removeOnGlobalLayoutListener(this);
 
+                    LinearLayout chooseAttribute = (LinearLayout)findViewById(R.id.chooseAttribute);
+                    for (int i = 1; i <= 5; i++) {
+                        chooseAttribute.addView(makeAttributeTextView(i, null));
+                    }
+                    for (GameState.CardColor color : GameState.CardColor.values()) {
+                        chooseAttribute.addView(makeAttributeTextView(-1, color));
+                    }
+
                     // In case all the data is ready already and was just waiting on this.
                     updateDisplay();
                 }
@@ -926,14 +934,6 @@ public class FireworksActivity extends Activity
 
         createInitialLog();
         ((TextView)findViewById(R.id.log)).setMovementMethod(new ScrollingMovementMethod());
-
-        LinearLayout chooseAttribute = (LinearLayout)findViewById(R.id.chooseAttribute);
-        for (int i = 1; i <= 5; i++) {
-            chooseAttribute.addView(makeAttributeTextView(i, null));
-        }
-        for (GameState.CardColor color : GameState.CardColor.values()) {
-            chooseAttribute.addView(makeAttributeTextView(-1, color));
-        }
     }
 
     private void addHandFragment(
@@ -988,14 +988,17 @@ public class FireworksActivity extends Activity
     private TextView makeAttributeTextView(final int rank, final GameState.CardColor color) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        // TODO(sdspikes): fix this to be proportional to the screen or something
-        params.setMargins(10, 5, 10, 5);
+        int oneButtonWidth = mDiscardWidthR2/10;
+        int marginWidth = oneButtonWidth/5;
+        params.setMargins(marginWidth, 5, marginWidth, 5);
+        params.width = oneButtonWidth - marginWidth * 2;
+
         TextView textView = new TextView(this);
         textView.setLayoutParams(params);
         textView.setText(String.valueOf(rank));
         if (rank == -1)
             textView.setText(" ");
-        textView.setPadding(20, 5, 20, 5);
+        textView.setGravity(Gravity.CENTER);
         textView.setBackgroundResource(HandFragment.cardColorToBGColor.get(color));
         textView.setTextColor(getResources().getColor(HandFragment.cardColorToTextColor(color)));
         textView.setVisibility(View.VISIBLE);

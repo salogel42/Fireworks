@@ -160,22 +160,19 @@
             android:orientation="horizontal" >
 
             <Button android:id="@+id/giveHintButton"
-                style="@style/GameButton"
+                style="@style/ActionButton"
                 android:text="@string/give_hint"
-                android:onClick="onGiveHintClicked"
-                android:layout_marginBottom="20dp" />
+                android:onClick="onGiveHintClicked"/>
 
             <Button android:id="@+id/discardButton"
-                style="@style/GameButton"
+                style="@style/ActionButton"
                 android:text="@string/discard"
-                android:onClick="onDiscardClicked"
-                android:layout_marginBottom="20dp" />
+                android:onClick="onDiscardClicked"/>
 
             <Button android:id="@+id/playButton"
-                style="@style/GameButton"
+                style="@style/ActionButton"
                 android:text="@string/play"
-                android:onClick="onPlayClicked"
-                android:layout_marginBottom="20dp" />
+                android:onClick="onPlayClicked" />
         </LinearLayout>
 
         <TextView
