@@ -15,6 +15,7 @@ The game currently works (only tested with 2 players so far), but does not have 
 * notifications when it's your turn if the app isn't active (for Words With Friends style play)
 * automatic marking of known info (possibly with settings for how far to take this)
 * allow user marking of known info (privately, based on other people's hands, or as an alternative to auto marking)
+* allow multiple concurrent games
 * build an AI (or multiple different ones?) so users can play solo (or remove the single player button if not!)
 
 ## How to install
