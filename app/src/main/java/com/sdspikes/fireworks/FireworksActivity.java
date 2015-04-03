@@ -989,9 +989,10 @@ public class FireworksActivity extends Activity
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         int oneButtonWidth = mDiscardWidthR2/10;
-        int marginWidth = oneButtonWidth/5;
+        int marginWidth = oneButtonWidth/10;
         params.setMargins(marginWidth, 5, marginWidth, 5);
         params.width = oneButtonWidth - marginWidth * 2;
+        params.height = params.width;
 
         TextView textView = new TextView(this);
         textView.setLayoutParams(params);
@@ -1027,7 +1028,8 @@ public class FireworksActivity extends Activity
                 } else {
                     int[] positions = new int[locations.size()];
                     for (int i = 0; i < positions.length; i++) {
-                        positions[i] = locations.get(i);
+                        // Make the positions 1-indexed
+                        positions[i] = locations.get(i) + 1;
                     }
                     LogItem item = new InfoLogItem(mMyId, mRecipientPlayer, info, positions);
 

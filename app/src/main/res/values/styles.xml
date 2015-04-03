@@ -25,6 +25,7 @@
     <color name="SignOutButtonBackground">#e0e0e0</color>
     <color name="SignOutButtonTextColor">#404040</color>
 
+    <color name="HandBG">#ffa09192</color>
     <color name="TextLightBG">#a0a0a0</color>
     <color name="TextDarkBG">#e0e0e0</color>
     <color name="TextDarkerBG">#f0f0f0</color>

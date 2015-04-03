@@ -2,9 +2,12 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:paddingBottom="5dp"
+    android:background="@color/HandBG" >
 
     <TextView
+        android:duplicateParentState="true"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
@@ -12,30 +15,11 @@
         android:id="@+id/player_name" />
 
     <LinearLayout
+        android:id="@+id/hand_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:gravity="center_horizontal"
-        android:minHeight="100px">
-
-        <Button
-            android:id="@+id/card1"
-            style="@style/CardButton"/>
-
-        <Button
-            android:id="@+id/card2"
-            style="@style/CardButton"/>
-
-        <Button
-            android:id="@+id/card3"
-            style="@style/CardButton"/>
-
-        <Button
-            android:id="@+id/card4"
-            style="@style/CardButton"/>
-
-        <Button
-            android:id="@+id/card5"
-            style="@style/CardButton"/>
-
-    </LinearLayout>
+        android:duplicateParentState="true"
+        android:minHeight="100px" />
 </LinearLayout>

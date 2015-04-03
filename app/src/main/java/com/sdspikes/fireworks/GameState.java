@@ -127,11 +127,11 @@ public class GameState {
         public JSONObject encodeNode() throws JSONException {
             JSONObject result = new JSONObject();
             result.put(NEXT_ID, nextPlayerId);
-            result.put(HAND, encodeHand());
+            result.put(HAND, encodeHand(hand));
             return result;
         }
 
-        public JSONArray encodeHand() throws JSONException {
+        public static JSONArray encodeHand(List<Card> hand) throws JSONException {
             JSONArray jsonHand = new JSONArray();
             for (Card c : hand) {
                 jsonHand.put(c.encodeCard());

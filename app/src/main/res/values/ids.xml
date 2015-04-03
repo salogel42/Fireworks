@@ -1,4 +1,9 @@
 <resources>
     <!-- Insert your app id from the Developer Consoles -->
     <string name="app_id">320252608242</string>
+    <item name="card1" type="id" />
+    <item name="card2" type="id" />
+    <item name="card3" type="id" />
+    <item name="card4" type="id" />
+    <item name="card5" type="id" />
 </resources>

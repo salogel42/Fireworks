@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -97,20 +98,14 @@ public class HandFragment extends Fragment {
             return null;
         }
 
-        View v;
         // Inflate the layout for this fragment
-        if (mHand.size() > 4) {
-            v = inflater.inflate(R.layout.fragment_large_hand, container, false);
-        } else {
-            v = inflater.inflate(R.layout.fragment_small_hand, container, false);
-        }
+        View v = inflater.inflate(R.layout.fragment_hand, container, false);
         cardButtons = new ArrayList<>();
-        cardButtons.add((Button)v.findViewById(R.id.card1));
-        cardButtons.add((Button)v.findViewById(R.id.card2));
-        cardButtons.add((Button)v.findViewById(R.id.card3));
-        cardButtons.add((Button)v.findViewById(R.id.card4));
-        if (mHand.size() > 4) {
-            cardButtons.add((Button)v.findViewById(R.id.card5));
+        for (int i = 0; i < mHand.size(); i++) {
+            Button b = new Button(getActivity());
+            b.setId(indexToId(i));
+            cardButtons.add(b);
+            ((LinearLayout) v.findViewById(R.id.hand_container)).addView(b);
         }
         playerName = (TextView)v.findViewById(R.id.player_name);
 
@@ -119,15 +114,24 @@ public class HandFragment extends Fragment {
             @Override
             public void onGlobalLayout() {
                 Log.d(TAG, "In the layout listener " + mPlayerName  );
-                Log.d(TAG, "View: " + getView());
-                Log.d(TAG, "mButtonWidth: " + mButtonWidth);
                 if (getView() != null && mButtonWidth == 0) {
-                    Log.d(TAG, "width: " + getView().getMeasuredWidth());
-                    // TODO(sdspikes): maybe use a per
                     mButtonWidth = (getView().getMeasuredWidth())/cardButtons.size();
                     if (mButtonWidth != 0) {
+                        Log.d(TAG, "Things are measurable! Width is " + getView().getMeasuredWidth());
+                        setUpView();
                         updateDisplay();
+                        // now that we have the width, no need for this listener anymore
+                        getView().getViewTreeObserver().removeOnGlobalLayoutListener(this);
                     }
+                }
+            }
+        });
+        v.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "player on-click triggered for " + mPlayerName);
+                if (mListener != null) {
+                    mListener.onFragmentSelected(mPlayerId, -1);
                 }
             }
         });
@@ -149,6 +153,17 @@ public class HandFragment extends Fragment {
             default: return -1;
         }
 
+    }
+
+    private int indexToId(int id) {
+        switch (id) {
+            case 0: return R.id.card1;
+            case 1: return R.id.card2;
+            case 2: return R.id.card3;
+            case 3: return R.id.card4;
+            case 4: return R.id.card5;
+            default: return -1;
+        }
     }
     @Override
     public void onAttach(Activity activity) {
@@ -184,38 +199,25 @@ public class HandFragment extends Fragment {
         public void onFragmentSelected(String playerId, int index);
     }
 
-    private void updateDisplay() {
-        // In case updateDisplay gets called before widths are calculated (it'll be called again
-        // when they are ready)
-        if (mButtonWidth == 0) { return; }
+    private void setUpView() {
+        int marginSize = mButtonWidth/10;
+        LinearLayout container = (LinearLayout) getView();
+        container.setPadding(0, 0, 0, marginSize);
+        TextView name = (TextView) getView().findViewById(R.id.player_name);
+        name.setPadding(marginSize, 0, 0, 0);
 
         for (int i = 0; i < mHand.size() && i < cardButtons.size(); i++) {
-            try {
-                Log.d(TAG, "" + i + "  card: " + mHand.get(i).encodeCard().toString());
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            TextView textView = cardButtons.get(i);
+            Button button = cardButtons.get(i);
 
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) textView.getLayoutParams();
-            //Button new width
-            int marginSize = mButtonWidth/10;
-            params.width = mButtonWidth - marginSize * 2;
-            params.height = params.width;
+            int buttonSize = mButtonWidth - marginSize * 2;
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(buttonSize, buttonSize);
             params.setMargins(marginSize, 0, marginSize, 0);
+            params.gravity = Gravity.CENTER;
 
-            textView.setLayoutParams(params);
-            if (!mHandHidden) {
-                textView.setText(Integer.toString(mHand.get(i).rank));
-                textView.setBackgroundResource(cardColorToBGColor.get(mHand.get(i).color));
-                textView.setTextColor(getResources().getColor(cardColorToTextColor(mHand.get(i).color)));
-            } else {
-                textView.setText(" ");
-                textView.setBackgroundResource(cardColorToBGColor.get(null));
-            }
+            button.setLayoutParams(params);
 
-            textView.setVisibility(View.VISIBLE);
-            textView.setOnClickListener(new View.OnClickListener() {
+            button.setVisibility(View.VISIBLE);
+            button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mListener != null) {
@@ -226,7 +228,32 @@ public class HandFragment extends Fragment {
         }
 
         playerName.setText(mPlayerName);
-        // TODO(sdspikes): update the display based on the hand etc
+    }
+    private void updateDisplay() {
+        // In case updateDisplay gets called before widths are calculated (it'll be called again
+        // when they are ready)
+        if (mButtonWidth == 0) { return; }
+
+        try {
+            Log.d(TAG, "cards: " + GameState.HandNode.encodeHand(mHand).toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < mHand.size() && i < cardButtons.size(); i++) {
+            Button button = cardButtons.get(i);
+
+            if (!mHandHidden) {
+                button.setText(Integer.toString(mHand.get(i).rank));
+                button.setBackgroundResource(cardColorToBGColor.get(mHand.get(i).color));
+                button.setTextColor(getResources().getColor(cardColorToTextColor(mHand.get(i).color)));
+            } else {
+                button.setText(" ");
+                button.setBackgroundResource(cardColorToBGColor.get(null));
+            }
+        }
+
+        playerName.setText(mPlayerName);
     }
 
     public static final Map<GameState.CardColor, Integer> cardColorToBGColor = new HashMap<>();
