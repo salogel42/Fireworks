@@ -1,8 +1,6 @@
 package com.sdspikes.fireworks;
 
 import android.app.Activity;
-import android.content.res.Resources;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.util.Log;
@@ -11,13 +9,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -35,12 +36,14 @@ public class HandFragment extends Fragment {
     private static final String ARG_HAND = "hand";
     private static final String ARG_PLAYER_ID = "player_id";
     private static final String ARG_PLAYER_NAME = "player_name";
+    public static final String ARG_HAND_HIDDEN = "hand_hidden";
 
     // TODO: Rename and change types of parameters
     private List<GameState.Card> mHand;
     private String mPlayerId;
     private String mPlayerName;
     private int mButtonWidth = 0;
+    private boolean mHandHidden;
 
     private ArrayList<Button> cardButtons;
     private TextView playerName;
@@ -54,12 +57,13 @@ public class HandFragment extends Fragment {
      * @param hand the hand to display in this fragment.
      * @return A new instance of fragment BlankFragment.
      */
-    public static HandFragment newInstance(List<GameState.Card> hand, String playerId, String playerName) {
+    public static HandFragment newInstance(List<GameState.Card> hand, String playerId, String playerName, boolean handHidden) {
         HandFragment fragment = new HandFragment();
         Bundle args = new Bundle();
         args.putParcelableArray(ARG_HAND, hand.toArray(new GameState.Card[hand.size()]));
         args.putString(ARG_PLAYER_ID, playerId);
         args.putString(ARG_PLAYER_NAME, playerName);
+        args.putBoolean(ARG_HAND_HIDDEN, handHidden);
         fragment.setArguments(args);
         return fragment;
     }
@@ -81,6 +85,7 @@ public class HandFragment extends Fragment {
             mHand = Arrays.asList((GameState.Card[]) getArguments().getParcelableArray(ARG_HAND));
             mPlayerId = getArguments().getString(ARG_PLAYER_ID);
             mPlayerName = getArguments().getString(ARG_PLAYER_NAME);
+            mHandHidden = getArguments().getBoolean(ARG_HAND_HIDDEN);
         }
     }
 
@@ -118,7 +123,8 @@ public class HandFragment extends Fragment {
                 Log.d(TAG, "mButtonWidth: " + mButtonWidth);
                 if (getView() != null && mButtonWidth == 0) {
                     Log.d(TAG, "width: " + getView().getMeasuredWidth());
-                    mButtonWidth = getView().getMeasuredWidth()/cardButtons.size();
+                    // TODO(sdspikes): maybe use a per
+                    mButtonWidth = (getView().getMeasuredWidth())/cardButtons.size();
                     if (mButtonWidth != 0) {
                         updateDisplay();
                     }
@@ -131,12 +137,6 @@ public class HandFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-    }
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(View v) {
-        if (mListener != null) {
-            mListener.onFragmentSelected(mPlayerId, idToIndex(v.getId()));
-        }
     }
 
     private int idToIndex(int id) {
@@ -195,18 +195,27 @@ public class HandFragment extends Fragment {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            Button button = cardButtons.get(i);
+            TextView textView = cardButtons.get(i);
 
-            ViewGroup.LayoutParams params = button.getLayoutParams();
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) textView.getLayoutParams();
             //Button new width
-            params.width = mButtonWidth;
+            int marginSize = mButtonWidth/10;
+            params.width = mButtonWidth - marginSize * 2;
+            params.height = params.width;
+            params.setMargins(marginSize, 0, marginSize, 0);
 
-            button.setLayoutParams(params);
-            button.setText(Integer.toString(mHand.get(i).rank));
-            button.setBackgroundResource(cardColorToBGColor(mHand.get(i).color));
-            button.setTextColor(getResources().getColor(cardColorToTextColor(mHand.get(i).color)));
-            button.setVisibility(View.VISIBLE);
-            button.setOnClickListener(new View.OnClickListener() {
+            textView.setLayoutParams(params);
+            if (!mHandHidden) {
+                textView.setText(Integer.toString(mHand.get(i).rank));
+                textView.setBackgroundResource(cardColorToBGColor.get(mHand.get(i).color));
+                textView.setTextColor(getResources().getColor(cardColorToTextColor(mHand.get(i).color)));
+            } else {
+                textView.setText(" ");
+                textView.setBackgroundResource(cardColorToBGColor.get(null));
+            }
+
+            textView.setVisibility(View.VISIBLE);
+            textView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mListener != null) {
@@ -220,21 +229,33 @@ public class HandFragment extends Fragment {
         // TODO(sdspikes): update the display based on the hand etc
     }
 
-    public static int cardColorToBGColor(GameState.CardColor color) {
-        switch (color) {
-            case b: return R.color.Blue;
-            case g: return R.color.Green;
-            case r: return R.color.Red;
-            case w: return R.color.White;
-            case y: return R.color.Yellow;
-            default: return R.color.BlurbColor;
-        }
+    public static final Map<GameState.CardColor, Integer> cardColorToBGColor = new HashMap<>();
+    static {
+        cardColorToBGColor.put(GameState.CardColor.b, R.color.Blue);
+        cardColorToBGColor.put(GameState.CardColor.g, R.color.Green);
+        cardColorToBGColor.put(GameState.CardColor.r, R.color.Red);
+        cardColorToBGColor.put(GameState.CardColor.w, R.color.White);
+        cardColorToBGColor.put(GameState.CardColor.y, R.color.Yellow);
+        cardColorToBGColor.put(null, R.color.TextDarkBG);
     }
 
     public static int cardColorToTextColor(GameState.CardColor color) {
+        if (color == null) return R.color.TextLightBG;
         switch (color) {
-            case b: case g: case r: return R.color.TextDarkBG;
+            case g: return R.color.TextDarkerBG;
+            case b: case r: return R.color.TextDarkBG;
             case w: case y: default: return R.color.TextLightBG;
+        }
+    }
+
+    public static String rankToString(int rank) {
+        switch (rank) {
+            case 1: return "one";
+            case 2: return "two";
+            case 3: return "three";
+            case 4: return "four";
+            case 5: return "five";
+            default: return "";
         }
     }
 }

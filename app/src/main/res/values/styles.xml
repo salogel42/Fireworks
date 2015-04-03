@@ -27,6 +27,7 @@
 
     <color name="TextLightBG">#a0a0a0</color>
     <color name="TextDarkBG">#e0e0e0</color>
+    <color name="TextDarkerBG">#f0f0f0</color>
     <color name="Blue">#ff5a7ecc</color>
     <color name="Red">#ffcc1d0a</color>
     <color name="Yellow">#fffaff88</color>

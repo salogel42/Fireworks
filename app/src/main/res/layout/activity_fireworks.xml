@@ -142,7 +142,7 @@
             <TextView style="@style/PlayedPileTile" android:id="@+id/red_played"
                 android:background="@color/Red" android:textColor="@color/TextDarkBG"/>
             <TextView style="@style/PlayedPileTile" android:id="@+id/green_played"
-                android:background="@color/Green" android:textColor="@color/TextDarkBG"/>
+                android:background="@color/Green" android:textColor="@color/TextDarkerBG"/>
             <TextView style="@style/PlayedPileTile" android:id="@+id/yellow_played"
                 android:background="@color/Yellow" android:textColor="@color/TextLightBG"/>
             <TextView style="@style/PlayedPileTile" android:id="@+id/white_played"
@@ -178,6 +178,28 @@
                 android:layout_marginBottom="20dp" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/player_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal" >
+        </TextView>
+
+        <LinearLayout
+            android:id="@+id/chooseAttribute"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal" >
+        </LinearLayout>
+
+        <TextView android:id="@+id/log"
+            android:layout_width="match_parent"
+            android:layout_height="fill_parent"
+            android:scrollbars="vertical"
+            android:gravity="bottom"
+            android:minLines="3"/>
     </LinearLayout>
 
 </FrameLayout>

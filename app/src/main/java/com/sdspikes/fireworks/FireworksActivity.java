@@ -15,10 +15,12 @@
 
 package com.sdspikes.fireworks;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -26,8 +28,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -47,12 +51,14 @@ import com.google.android.gms.games.multiplayer.realtime.RoomStatusUpdateListene
 import com.google.android.gms.games.multiplayer.realtime.RoomUpdateListener;
 import com.google.android.gms.plus.Plus;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -658,7 +664,17 @@ public class FireworksActivity extends Activity
 
     private boolean mPlayMode = false;
 
-    private Map<String, HandFragment> fragments = new HashMap<>();
+    private boolean mPlayerSelectionMode = false;
+
+    private Map<String, HandFragment> fragments = null;
+
+    private int mDiscardWidthR1 = 0;
+
+    private int mDiscardWidthR2 = 0;
+
+    private List<String> actionLog = new ArrayList<>();
+
+    private String mRecipientPlayer = null;
 
     // Reset game variables in preparation for a new game.
     void resetGameVars() {
@@ -668,8 +684,14 @@ public class FireworksActivity extends Activity
         mHandSelectionMode = false;
         mDiscardMode = false;
         mPlayMode = false;
-        fragments = new HashMap<>();
-        togglePlayOptionsVisible(false);
+        fragments = null;
+        mDiscardWidthR1 = 0;
+        mDiscardWidthR2 = 0;
+        actionLog = new ArrayList<>();
+        mPlayerSelectionMode = false;
+        mRecipientPlayer = null;
+
+        togglePlayOptionsVisible(PlayOptions.play);
     }
 
     // Assumes mRoom is set up
@@ -717,10 +739,141 @@ public class FireworksActivity extends Activity
 //                } catch (JSONException e) {
 //                    e.printStackTrace();
 //                }
-                togglePlayOptionsVisible(true);
+                togglePlayOptionsVisible(PlayOptions.play);
             } else {
                 Log.d(TAG, mMyId + " is not the first id and should get a message w/ game state");
+                togglePlayOptionsVisible(PlayOptions.turnMessage);
             }
+        }
+    }
+
+    public interface LogItem {
+        public static final String SENDER_ID = "senderId";
+        public static final String TYPE = "type";
+
+        public JSONObject getJSONObject();
+        public String toString();
+    }
+
+    private String getPlayerString(String id, boolean beginning) {
+        if (id.equals(mMyId)) {
+            if (beginning) return "You";
+            return "you";
+        }
+        return mIdToName.get(id);
+    }
+
+    public class InfoLogItem implements LogItem {
+        public static final String RECIPIENT_ID = "recipientId";
+        public static final String INFO = "info";
+        public static final String POSITIONS = "positions";
+
+        final String senderId;
+        final String recipientId;
+        // This will be a rank or color (e.g. two, red).
+        final String info;
+        final int[] positions;
+
+        public InfoLogItem(String senderId, String recipientId, String info, int[] positions) {
+            this.senderId = senderId;
+            this.recipientId = recipientId;
+            this.info = info;
+            this.positions = positions;
+        }
+
+            public InfoLogItem(JSONObject obj) throws JSONException {
+            senderId = obj.getString(SENDER_ID);
+            recipientId = obj.getString(RECIPIENT_ID);
+            info = obj.getString(INFO);
+            positions = GameState.decodeIntArray(obj.getJSONArray(POSITIONS));
+        }
+        @Override
+        public JSONObject getJSONObject() {
+            JSONObject obj = new JSONObject();
+            try {
+                obj.put(SENDER_ID, senderId);
+                obj.put(RECIPIENT_ID, recipientId);
+                obj.put(INFO, info);
+                obj.put(POSITIONS, GameState.encodeIntArray(positions));
+                obj.put(TYPE, INFO);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return obj;
+        }
+
+        @Override
+        public String toString() {
+            String s = (positions.length > 1)? "s" :"";
+            return getPlayerString(senderId, true) + " told " + getPlayerString(recipientId, false)
+                    + " about the " + info + s + " at the following position" + s + ": "
+                    + Arrays.toString(positions);
+        }
+    }
+
+    public class ActionLogItem implements LogItem {
+        public static final String CARD = "card";
+        public static final String ACTION = "action";
+
+        final String senderId;
+        final GameState.Card card;
+        // "discarded" or "played" or "drew"
+        final String action;
+
+        public ActionLogItem(String senderId, GameState.Card card, String action) {
+            this.senderId = senderId;
+            this.card = card;
+            this.action = action;
+        }
+
+        public ActionLogItem(JSONObject obj) throws JSONException {
+            senderId = obj.getString(SENDER_ID);
+            card = new GameState.Card(obj.getJSONObject(CARD));
+            action = obj.getString(ACTION);
+        }
+        @Override
+        public JSONObject getJSONObject() {
+            JSONObject obj = new JSONObject();
+            try {
+                obj.put(SENDER_ID, senderId);
+                obj.put(CARD, card.encodeCard());
+                obj.put(ACTION, action);
+                obj.put(TYPE, ACTION);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return obj;
+        }
+
+        @Override
+        public String toString() {
+            String cardString = card.toString();
+            if (mMyId.equals(senderId) && action.equals("drew")) {
+                cardString = "card";
+            }
+            return getPlayerString(senderId, true) + " " + action + " a " + cardString;
+        }
+    }
+
+    public LogItem parseLogItem(JSONObject obj) throws JSONException {
+        String type = obj.getString(LogItem.TYPE);
+        if (type.equals("action")) {
+            return new ActionLogItem(obj);
+        } else if (type.equals("info")) {
+            return new InfoLogItem(obj);
+        }
+        return null;
+    }
+
+    private void createInitialLog() {
+        String currentId = mMyId;
+        while (true) {
+            GameState.HandNode handNode = mTurnData.state.hands.get(currentId);
+            for (GameState.Card card : handNode.hand) {
+                actionLog.add(new ActionLogItem(currentId, card, "drew").toString());
+            }
+            currentId = handNode.nextPlayerId;
+            if (mMyId.equals(currentId)) { break; }
         }
     }
 
@@ -728,6 +881,7 @@ public class FireworksActivity extends Activity
         switchToScreen(R.id.screen_game);
         GameState.HandNode currentNode = mTurnData.state.hands.get(mMyId);
         FragmentManager fm = getFragmentManager();
+        fragments = new HashMap<>();
 
         if (fm.findFragmentById(R.id.my_hand) == null) {
             if (currentNode != null) {
@@ -769,6 +923,17 @@ public class FireworksActivity extends Activity
                 }
             }
         });
+
+        createInitialLog();
+        ((TextView)findViewById(R.id.log)).setMovementMethod(new ScrollingMovementMethod());
+
+        LinearLayout chooseAttribute = (LinearLayout)findViewById(R.id.chooseAttribute);
+        for (int i = 1; i <= 5; i++) {
+            chooseAttribute.addView(makeAttributeTextView(i, null));
+        }
+        for (GameState.CardColor color : GameState.CardColor.values()) {
+            chooseAttribute.addView(makeAttributeTextView(-1, color));
+        }
     }
 
     private void addHandFragment(
@@ -781,16 +946,101 @@ public class FireworksActivity extends Activity
         HandFragment handFragment = HandFragment.newInstance(
                 node.hand,
                 playerId,
-                playerName);
+                playerName,
+                playerId == mMyId);
         fragments.put(playerId, handFragment);
         // TODO(sdspikes): previously I just had .commit here and got
         // java.lang.IllegalStateException: Can not perform this action after onSaveInstanceState
         fm.beginTransaction().add(id, handFragment).commitAllowingStateLoss();
     }
 
-    private void togglePlayOptionsVisible(boolean visible) {
-        findViewById(R.id.my_turn_buttons).setVisibility(visible ? View.VISIBLE : View.GONE);
+    private enum PlayOptions {
+        play,
+        chooseCard,
+        turnMessage,
+        choosePlayer,
+        chooseAttribute
     }
+
+    private void togglePlayOptionsVisible(PlayOptions option) {
+        findViewById(R.id.my_turn_buttons).setVisibility(
+                option == PlayOptions.play ? View.VISIBLE : View.GONE);
+
+        TextView message = (TextView)findViewById(R.id.player_message);
+        message.setVisibility(View.GONE);
+        if (option == PlayOptions.turnMessage) {
+            if (mTurnData != null)
+                message.setText(mIdToName.get(mTurnData.state.currentPlayerId) + "'s turn");
+            message.setVisibility(View.VISIBLE);
+        } else  if (option == PlayOptions.choosePlayer) {
+            message.setText("Choose a player.");
+            message.setVisibility(View.VISIBLE);
+        } else if (option == PlayOptions.chooseCard) {
+            message.setText("Choose a card from your hand.");
+            message.setVisibility(View.VISIBLE);
+        }
+
+        LinearLayout chooseAttribute = (LinearLayout)findViewById(R.id.chooseAttribute);
+        chooseAttribute.setVisibility(
+                option == PlayOptions.chooseAttribute ? View.VISIBLE : View.GONE);
+    }
+
+    private TextView makeAttributeTextView(final int rank, final GameState.CardColor color) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        // TODO(sdspikes): fix this to be proportional to the screen or something
+        params.setMargins(10, 5, 10, 5);
+        TextView textView = new TextView(this);
+        textView.setLayoutParams(params);
+        textView.setText(String.valueOf(rank));
+        if (rank == -1)
+            textView.setText(" ");
+        textView.setPadding(20, 5, 20, 5);
+        textView.setBackgroundResource(HandFragment.cardColorToBGColor.get(color));
+        textView.setTextColor(getResources().getColor(HandFragment.cardColorToTextColor(color)));
+        textView.setVisibility(View.VISIBLE);
+
+        textView.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "clicked on an attribute button: " + GameState.Card.cardColorToString(color) + " " + rank);
+                List<GameState.Card> hand = mTurnData.state.hands.get(mRecipientPlayer).hand;
+                List<Integer> locations = new ArrayList<Integer>();
+                String info = "";
+                if (rank == -1) {
+                    info = GameState.Card.cardColorToString(color);
+                    for (int i = 0; i < hand.size(); i++) {
+                        if (hand.get(i).color == color) locations.add(i);
+                    }
+                } else {
+                    info = HandFragment.rankToString(rank);
+                    for (int i = 0; i < hand.size(); i++) {
+                        if (hand.get(i).rank == rank) locations.add(i);
+                    }
+                }
+                if (locations.size() == 0) {
+                    Toast.makeText(FireworksActivity.this, mIdToName.get(mRecipientPlayer) + " does not have any " + info, Toast.LENGTH_SHORT);
+                } else {
+                    int[] positions = new int[locations.size()];
+                    for (int i = 0; i < positions.length; i++) {
+                        positions[i] = locations.get(i);
+                    }
+                    LogItem item = new InfoLogItem(mMyId, mRecipientPlayer, info, positions);
+
+                    actionLog.add(item.toString());
+                    mTurnData.state.hintsRemaining--;
+                    mTurnData.state.currentPlayerId = mTurnData.state.hands.get(mTurnData.state.currentPlayerId).nextPlayerId;
+                    togglePlayOptionsVisible(PlayOptions.turnMessage);
+                    broadcastGameInfo(item.getJSONObject());
+                    updateAllPlayers(mTurnData.getJSONObject());
+                    mRecipientPlayer = null;
+                }
+            }
+        });
+        return textView;
+    }
+
 
     /*
      * COMMUNICATIONS SECTION. Methods that implement the game's network
@@ -806,8 +1056,9 @@ public class FireworksActivity extends Activity
         try {
             JSONObject obj = unpersist(buf);
             // First, try seeing if it's a gamestate since that's the most common message
-            mTurnData = FireworksTurn.unpersist(obj);
-            if (mTurnData != null) {
+            FireworksTurn newTurn = FireworksTurn.unpersist(obj);
+            if (newTurn != null) {
+                mTurnData = newTurn;
                 Log.d(TAG, "got turn data!");
                 if (obj.has("firstTime")) {
                     // Set up the id map if necessary
@@ -816,7 +1067,10 @@ public class FireworksActivity extends Activity
                 } else {
                     updateDisplay();
                 }
-                togglePlayOptionsVisible(mMyId.equals(mTurnData.state.currentPlayerId));
+                togglePlayOptionsVisible(mMyId.equals(mTurnData.state.currentPlayerId)? PlayOptions.play : PlayOptions.turnMessage);
+            } else if (obj.has(LogItem.TYPE)) {
+                actionLog.add(parseLogItem(obj).toString());
+                updateDisplay();
             } else if (obj.has("handUpdate")) {
                 // TODO(sdspikes): is it possible that the hand could be updated (different cards)
                 // before this?
@@ -968,12 +1222,9 @@ public class FireworksActivity extends Activity
         broadcastGameInfo(obj);
     }
 
-    private int mDiscardWidthR1 = 0;
-    private int mDiscardWidthR2 = 0;
-
     private void updateDisplay() {
         // In case it's called too early
-        if (mTurnData == null) { return; }
+        if (mTurnData == null || fragments == null) { return; }
         for (Map.Entry<String, GameState.HandNode> entry : mTurnData.state.hands.entrySet()) {
             fragments.get(entry.getKey()).updateHand(entry.getValue().hand);
         }
@@ -991,6 +1242,11 @@ public class FireworksActivity extends Activity
         }
         // TODO(sdspikes): add log
 
+        String logString = "";
+        for (String log : actionLog) {
+            logString += log + "\n";
+        }
+        ((TextView)findViewById(R.id.log)).setText(logString);
     }
 
     private void displayDiscardPiles() {
@@ -1033,7 +1289,7 @@ public class FireworksActivity extends Activity
         textView.setLayoutParams(params);
         textView.setGravity(Gravity.CENTER);
         textView.setText(String.valueOf(card.rank));
-        textView.setBackgroundResource(HandFragment.cardColorToBGColor(card.color));
+        textView.setBackgroundResource(HandFragment.cardColorToBGColor.get(card.color));
         textView.setTextColor(getResources().getColor(HandFragment.cardColorToTextColor(card.color)));
         return textView;
     }
@@ -1063,7 +1319,7 @@ public class FireworksActivity extends Activity
     // giving up on the view.
     public void onDiscardClicked(View view) {
         // allow user to click their cards, listener will deal with actually doing the work
-        togglePlayOptionsVisible(false);
+        togglePlayOptionsVisible(PlayOptions.chooseCard);
         mHandSelectionMode = true;
         mDiscardMode = true;
     }
@@ -1072,7 +1328,7 @@ public class FireworksActivity extends Activity
     // Games.TurnBasedMultiplayer.leaveMatch() if you want to leave NOT on your turn.
     public void onPlayClicked(View view) {
         // allow user to click their cards, listener will deal with actually doing the work
-        togglePlayOptionsVisible(false);
+        togglePlayOptionsVisible(PlayOptions.chooseCard);
         mHandSelectionMode = true;
         mPlayMode = true;
     }
@@ -1087,15 +1343,20 @@ public class FireworksActivity extends Activity
         // TODO(sdspikes): choose attribute
         // TODO(sdspikes): notify all players
         updateAllPlayers(mTurnData.getJSONObject());
+        togglePlayOptionsVisible(PlayOptions.choosePlayer);
+        mPlayerSelectionMode = true;
     }
 
     @Override
     public void onFragmentSelected(String playerId, int index) {
-        if (mHandSelectionMode && playerId == mMyId) {
+        if (mHandSelectionMode && playerId.equals(mMyId)) {
+            String action = "";
             GameState.HandNode node = mTurnData.state.hands.get(mMyId);
             GameState.Card removedCard = node.hand.remove(index);
-            node.hand.add(mTurnData.state.deck.remove());
+            GameState.Card drawnCard = mTurnData.state.deck.remove();
+            node.hand.add(drawnCard);
             if (mPlayMode) {
+                action = "played";
                 if (mTurnData.state.played[removedCard.color.ordinal()] == removedCard.rank - 1) {
                     mTurnData.state.played[removedCard.color.ordinal()]++;
                 } else {
@@ -1103,6 +1364,7 @@ public class FireworksActivity extends Activity
                 }
             }
             if (mDiscardMode) {
+                action = "discarded";
                 mTurnData.state.discarded[removedCard.color.ordinal()].add(removedCard);
             }
             mTurnData.state.currentPlayerId =
@@ -1112,6 +1374,20 @@ public class FireworksActivity extends Activity
             mDiscardMode = false;
             mHandSelectionMode = false;
             updateAllPlayers(mTurnData.getJSONObject());
+
+            ActionLogItem item = new ActionLogItem(mMyId, removedCard, action);
+            actionLog.add(item.toString());
+            broadcastGameInfo(item.getJSONObject());
+
+            item = new ActionLogItem(mMyId, drawnCard, "drew");
+            actionLog.add(item.toString());
+            broadcastGameInfo(item.getJSONObject());
+
+            updateDisplay();
+            togglePlayOptionsVisible(PlayOptions.turnMessage);
+        } else if (mPlayerSelectionMode && playerId != mMyId) {
+            mRecipientPlayer = playerId;
+            togglePlayOptionsVisible(PlayOptions.chooseAttribute);
         }
     }
 }

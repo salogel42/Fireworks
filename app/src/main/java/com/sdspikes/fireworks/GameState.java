@@ -76,6 +76,25 @@ public class GameState {
             cardObject.put(RANK, rank);
             return cardObject;
         }
+
+        @Override
+        public String toString () {
+            // e.g. blue 2
+            return cardColorToString(color) + " " + rank;
+        }
+
+        public static String cardColorToString(GameState.CardColor color) {
+            if (color == null) { return ""; }
+            switch (color) {
+                case b: return "blue";
+                case g: return "green";
+                case r: return "red";
+                case w: return "white";
+                case y: return "yellow";
+                default: return "";
+            }
+        }
+
     }
 
     public static class HandNode {
@@ -197,15 +216,15 @@ public class GameState {
         return arr;
     }
 
-    private static int[] decodeIntArray(JSONArray jsonArray) throws JSONException {
-        int[] arr = new int[CardColor.values().length];
+    public static int[] decodeIntArray(JSONArray jsonArray) throws JSONException {
+        int[] arr = new int[jsonArray.length()];
         for (int i = 0; i < jsonArray.length(); i++) {
             arr[i] = jsonArray.getInt(i);
         }
         return arr;
     }
 
-    private static JSONArray encodeIntArray(int[] arr) throws JSONException {
+    public static JSONArray encodeIntArray(int[] arr) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         for (int i : arr) {
             jsonArray.put(i);
